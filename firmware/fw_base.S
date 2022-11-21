@@ -99,10 +99,20 @@ _try_lottery:
      * 当有其他hart再次执行时，a6每次都会自增1，这样只有第一个执行以上代码的a6才等于0。
      */
 	/* Save load address */
-	/* 保存加载地址 */
+	/**
+     * t0 是 _load_start 这个符号的地址，这个地址存的是 _fw_start 的值
+	 * t1 是 _fw_start 这个符号的地址，三种固件中，_fw_start 这个符号都在bin文件
+	 * 的起始位置，所以，这里取_fw_start的运行时的地址，其实就是bin文件实际
+	 * 被加载到的地址。
+     * 保存bin文件的实际加载位置到 _load_start, qemu virt平台上的链接地址
+	 * 和实际加载地址是一样的，都是内存0x80000000这个地址，但是，如果bios
+	 * 是加载到其他地方，比如flash里，链接地址和实际加载位置就是不一样的。
+	 * 这个时候就需要做重定向(relocate) ，把bin文件从实际加载位置拷贝到链接地址。
+	 */
 	lla	t0, _load_start /* t0 = _load_start = 0x800004c8 */
 	lla	t1, _fw_start   /* t1 = 0x80000000 */
-	/* MEM[_load_start + 0] = _start 
+	/**
+     * MEM[_load_start + 0] = _start 
 	 * MEM[t0 + 0] = 0x80000000  
 	 */
 	REG_S	t1, 0(t0)
@@ -154,6 +164,7 @@ _try_lottery:
 	REG_S	t5, 0(t3)		/* store runtime address to the variable */
 
 5:
+    /* 循环处理.rel.dyn这个段里的信息 */
 	addi	t0, t0, (REGBYTES*3)
 	ble	t0, t1, 2b
 	j	_relocate_done
@@ -166,6 +177,7 @@ _relocate:
 	REG_L	t0, 0(t0)    /* t0 = 0x80000000 */
 	lla	t1, _link_end    /* t1 = 0x800004d8 */
 	REG_L	t1, 0(t1)    /* t1 = 0x80201028 */
+    /* 加载地址在上面已经得到，这里把加载地址取出，放到t2 */
 	lla	t2, _load_start  /* t2 = 0x800004c8 */
 	REG_L	t2, 0(t2)    /* t2 = 0x80000000 */
 	/* if _link_start == _load_start 结束重定位 */
@@ -173,9 +185,14 @@ _relocate:
 	sub	t3, t1, t0       /* t3 = t1 - t0 = 201028 */
 	add	t3, t3, t2       /* t3 = t3 + t2 = 0x80201028 */
 	lla	t4, _relocate_done
+    /* else 开始重定位 */
 	sub	t4, t4, t2
 	add	t4, t4, t0
 	blt	t2, t0, _relocate_copy_to_upper
+/**
+ * _load_start 比 _link_start 大, 往低地址拷贝数据, 可以看到t2和t0是拷贝时的指针。
+ * 所以，_link_end(t1)要比_load_start(t2)小，不然拷贝的时候会出现重叠的情况。
+ */
 _relocate_copy_to_lower:
 	ble	t1, t2, _relocate_copy_to_lower_loop
 	lla	t3, _relocate_lottery
@@ -244,7 +261,11 @@ _wait_relocate_copy_done:
 	jr	t3
 #endif
 _relocate_done:
-
+/**
+  * Boot HART(这里指的是抽签抽中的HART)，执行完重定向后跳转至此
+  * 置 _boot_status 这个全局变量为 BOOT_STATUS_RELOCATE_DONE。
+  * 其余HART一直处于等待状态，知道Boot HART完成重定向。
+  */
 	/*
 	 * Mark relocate copy done
 	 * Use _boot_status copy relative to the load address
@@ -315,7 +336,12 @@ _bss_zero:
 	MOV_5R	a0, s0, a1, s1, a2, s2, a3, s3, a4, s4
 	add	a1, t0, zero
     
-	/* 预加载 HART 的一些信息 */
+	/**
+     * 预加载 HART 的一些信息
+     * platform是平台相关的数据结构，qemu virt的定义在:
+	 * platform/generic/platform.c, 这个是 opensbi 里针对 qemu virt平台定义
+	 * 的配置。最大的核数是128，栈大小是8KB。
+     */
 	/* Preload HART details
 	 * a4 -> platform = 0x800120e8
 	 * s7 -> HART Count = 0x2
@@ -332,7 +358,9 @@ _bss_zero:
 
 	/* Setup scratch space for all the HARTs*/
 	lla	tp, _fw_end
+    /* 算出全部核需要的栈内存大小 */
 	mul	a5, s7, s8
+    /* tp,t3都指向全部栈内存的起始基地址 */
 	add	tp, tp, a5
 	/* Keep a copy of tp */
 	add	t3, tp, zero
@@ -349,12 +377,41 @@ _scratch_init:
 	 * s7 -> HART count
 	 * s8 -> HART stack size
 	 */
+	/* tp拿到全部栈内存的基地址，将tp保存一份到t3 */
 	add	tp, t3, zero
+    /**
+     * t1是首次是0，所以，首次计算a5是0，这个t1是hart的编号，s8是每个核的栈大小，
+	 * 所以，a5是每个hart的栈的偏移。
+     */
 	mul	a5, s8, t1
+    /**
+     * 可以看到每个hart的栈是全部栈内存的基地址开始，随hart id增加，依次
+	 * 向小地址分配，每个核的scratch内存是4KB，是从栈的中间开始的。
+     */
 	sub	tp, tp, a5
 	li	a5, SBI_SCRATCH_SIZE
+    /*
+	 * n: tp这里是scratch开始地址，scratch的基本排布大概类似：
+	 *
+	 *    _fw_start 
+	 *
+	 *
+	 *    _fw_end
+	 *                                          |
+	 *                                          |  地址增大
+	 *                                          |
+	 *                                          v
+	 *    stack                                      
+	 *    ^                                      
+	 *    | 8KB                                     
+	 *    |                                      
+	 *    |  scratch start(hart 0)     <--- tp
+	 *    |    ^
+	 *    |    | 4KB
+	 *    |    v
+	 *    v  scratch end               <--- t3
+	 */ 
 	sub	tp, tp, a5
-	/* 将tp保存一份到t3 */
 	/* 为何赋值操作要用addi指令。因为mv指令是伪指令，基础指令就是addi */
 
 	/* 为所有HART设置scratch空间 */
@@ -368,6 +425,14 @@ _scratch_init:
 	REG_S	a5, SBI_SCRATCH_FW_SIZE_OFFSET(tp)
 	/* Store next arg1 in scratch space */
 	MOV_3R	s0, a0, s1, a1, s2, a2
+    /**
+     * 从opensbi的上一个bootloader拿opensbi启动下一个系统(一般是内核)。
+     * 可以看到，三种fw的函数个不相同，fw_dynamic对上和对下都有固定的参数传递数据结构；
+     * fw_jump 和 fw_payload 的处理一样，可以是编译配置的参数，也可以是从a1传递的参数。
+     * a0是如下函数的返回值。
+     * 可以看到_dynamic_next_arg1相关的内存和scratch内存是两个不同的概念。
+     * 下面就是填scratch的各个域段。
+     */
 	call	fw_next_arg1
 	REG_S	a0, SBI_SCRATCH_NEXT_ARG1_OFFSET(tp)
 	MOV_3R	a0, s0, a1, s1, a2, s2
