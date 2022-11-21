@@ -1,0 +1,17 @@
+From 37d46ba67af7fcb59d05a6a0c9020a644edf0eba Mon Sep 17 00:00:00 2001
+From: Dongdong Zhang <zhangdongdong@eswincomputing.com>
+Date: Tue, 29 Nov 2022 15:57:57 +0800
+Subject: [PATCH v2 0/1] firmware: Minor optimization for relocate
+
+v1->v2
+    Modify the commit message to about 70 characters per line.
+
+Dongdong Zhang (1):
+  firmware: Minor optimization for relocate
+
+ firmware/fw_base.S | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+-- 
+2.17.1
+

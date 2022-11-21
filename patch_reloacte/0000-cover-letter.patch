@@ -1,0 +1,18 @@
+From d1492b41b214581aba45a9458de4c0cda31c2413 Mon Sep 17 00:00:00 2001
+From: Dongdong Zhang <zhangdongdong@eswincomputing.com>
+Date: Mon, 28 Nov 2022 19:16:03 +0800
+Subject: [PATCH 0/1] firmware: Minor optimization for relocate
+
+The t3 register stores the address of _load_end. If relocation is not required, it is unnecessary to calculate the address of _load_end.
+
+This can reduce the operation time of two instructions.
+
+Dongdong Zhang (1):
+  firmware: Minor optimization for relocate
+
+ firmware/fw_base.S | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+-- 
+2.17.1
+

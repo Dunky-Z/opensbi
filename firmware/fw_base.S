@@ -48,27 +48,67 @@
 	.globl _start_warm
 _start:
 	/* Find preferred boot HART id */
+    /* 先备份一下a0,a1,a2因为后续需要使用这些寄存器原有值 */
 	MOV_3R	s0, a0, s1, a1, s2, a2
+    /* 读取启动信息，包括boot HART id */
+    /**
+     * 对于fw_jump和fw_payload类型这个函数直接返回-1，不能指定Boot HART，让它们强制进入_try_lottery
+     * 随机选择Boot HART。对于 fw_dynamic 类型，启动opensbi的上级程序会将参数放在struct fw_dynamic_info里，
+     * 然后用a2寄存器传递给OpenSBI。fw_boot_hart函数分析见firmware/fw_dynamic.S。
+     * 上级程序如何传递struct fw_dynamic_info，分析见QEMU启动OpenSBI分析。
+    */
 	call	fw_boot_hart
 	add	a6, a0, zero
+    /* 恢复a0, a1, a2的值 */
 	MOV_3R	a0, s0, a1, s1, a2, s2
+    /* a7 = -1 = 0xffffffff*/
 	li	a7, -1
+    /**
+     * 除了 fw_dynamic 类型，其他类型的固件，执行时所有HART都会进入_try_lottery
+     * 因为a7 一定等于 -1 一定等于 a0。
+	 */
 	beq	a6, a7, _try_lottery
+	/**
+     * 如果是 fw_dynamic 类型，那么a6寄存器在上一级会指定boot hart，并且a0是当前的hart id应该用a0
+     * 经过对比，如果两者不等说明不是指定的boot hart，直接跳到等待重定位完成就行。
+     * 如果是 boot hart 就继续执行
+     */
 	/* Jump to relocation wait loop if we are not boot hart */
 	bne	a0, a6, _wait_relocate_copy_done
 _try_lottery:
+	/**
+     * fw_dynamic 类型指定了boot hart id，只有一个hart会到这。其余类型所有hart 都会执行到这。
+     * 这里的抽签机制很有意思，所有hart执行完都会把一个全局变量加1，只有第一个执行完的hart 的a6寄存器为0，
+     * 所以这里就是谁先抢先执行完，谁就会进行重定向等一系列初始化操作，其余hart都等待这个hart完成初始化工作。
+    */
 	/* Jump to relocation wait loop if we don't get relocation lottery */
-	lla	a6, _relocate_lottery
-	li	a7, 1
+	lla	a6, _relocate_lottery   /* a6 = _relocate_lottery = 0x800004b8 */
+	li	a7, 1                   /* a7 = 1 */
 	amoadd.w a6, a7, (a6)
 	bnez	a6, _wait_relocate_copy_done
-
+    /**
+     * 以上三行代码的过程如下：
+     * int a6;
+     * int a7 = 1;
+     * int _relocate_lottery = 0;
+     * a6 = &(_relocate_lottery);
+     * a6 = *a6;
+     * *a6 += a7;
+     * 最终结果：
+     * _relocate_lottery = 1；a7 = 1; a6 = 0; 
+     * 当有其他hart再次执行时，a6每次都会自增1，这样只有第一个执行以上代码的a6才等于0。
+     */
 	/* Save load address */
-	lla	t0, _load_start
-	lla	t1, _fw_start
+	/* 保存加载地址 */
+	lla	t0, _load_start /* t0 = _load_start = 0x800004c8 */
+	lla	t1, _fw_start   /* t1 = 0x80000000 */
+	/* MEM[_load_start + 0] = _start 
+	 * MEM[t0 + 0] = 0x80000000  
+	 */
 	REG_S	t1, 0(t0)
 
 #ifdef FW_PIC
+	/* 如果 load address != link address 开始重定位 */
 	/* relocate the global table content */
 	lla	t0, _link_start
 	REG_L	t0, 0(t0)
@@ -122,15 +162,16 @@ _wait_relocate_copy_done:
 #else
 	/* Relocate if load address != link address */
 _relocate:
-	lla	t0, _link_start
-	REG_L	t0, 0(t0)
-	lla	t1, _link_end
-	REG_L	t1, 0(t1)
-	lla	t2, _load_start
-	REG_L	t2, 0(t2)
+	lla	t0, _link_start  /* t0 = 0x800004d0 */
+	REG_L	t0, 0(t0)    /* t0 = 0x80000000 */
+	lla	t1, _link_end    /* t1 = 0x800004d8 */
+	REG_L	t1, 0(t1)    /* t1 = 0x80201028 */
+	lla	t2, _load_start  /* t2 = 0x800004c8 */
+	REG_L	t2, 0(t2)    /* t2 = 0x80000000 */
+	/* if _link_start == _load_start 结束重定位 */
 	beq	t0, t2, _relocate_done
-	sub	t3, t1, t0
-	add	t3, t3, t2
+	sub	t3, t1, t0       /* t3 = t1 - t0 = 201028 */
+	add	t3, t3, t2       /* t3 = t3 + t2 = 0x80201028 */
 	lla	t4, _relocate_done
 	sub	t4, t4, t2
 	add	t4, t4, t0
@@ -172,22 +213,33 @@ _relocate_copy_to_upper_loop:
 	blt	t0, t1, _relocate_copy_to_upper_loop
 	jr	t4
 _wait_relocate_copy_done:
+	/* 等待重定位copy结束，直到_start == _link_start */
 	lla	t0, _fw_start
+	/* t1 = MEM[_link_start] = MEM[0x80000000] */
 	lla	t1, _link_start
 	REG_L	t1, 0(t1)
 	beq	t0, t1, _wait_for_boot_hart
+	/* t2 = _boot_status ,t3 = _wait_for_boot_hart */
 	lla	t2, _boot_status
 	lla	t3, _wait_for_boot_hart
+	/* _wait_for_boot_hart = _wait_for_boot_hart - _start */
+	/* _wait_for_boot_hart = _wait_for_boot_hart + MEM[0x80000000] */
+	/* _wait_for_boot_hart = _wait_for_boot_hart - _start + MEM[0x80000000] */
 	sub	t3, t3, t0
 	add	t3, t3, t1
 1:
+	/* 等待重定位完成， 也就是 _boot_status == 1 时 */
+	/* t4 = 1 */
 	/* waitting for relocate copy done (_boot_status == 1) */
 	li	t4, BOOT_STATUS_RELOCATE_DONE
+	/* t5 = MEM[_boot_status + 0]  = 0 */
 	REG_L	t5, 0(t2)
+	/* 减少总线流量，以便引导hart可以更快地进行 */
 	/* Reduce the bus traffic so that boot hart may proceed faster */
 	nop
 	nop
 	nop
+	/* if(1 > t5) pc += 1b */
 	bgt     t4, t5, 1b
 	jr	t3
 #endif
@@ -197,43 +249,48 @@ _relocate_done:
 	 * Mark relocate copy done
 	 * Use _boot_status copy relative to the load address
 	 */
-	lla	t0, _boot_status
+	lla	t0, _boot_status /* t0 = 0x800004c0 */
 #ifndef FW_PIC
-	lla	t1, _link_start
-	REG_L	t1, 0(t1)
-	lla	t2, _load_start
-	REG_L	t2, 0(t2)
-	sub	t0, t0, t1
-	add	t0, t0, t2
+	lla	t1, _link_start  /* t1 = 0x800004d0 */
+	REG_L	t1, 0(t1)    /* t1 = 0x80000000 */
+	lla	t2, _load_start  /* t2 = 0x800004c8 */
+	REG_L	t2, 0(t2)    /* t2 = 0x80000000 */
+	sub	t0, t0, t1       /* t0 = 0x4c0 */
+	add	t0, t0, t2       /* t0 = 0x800004c0 */
 #endif
-	li	t1, BOOT_STATUS_RELOCATE_DONE
+	li	t1, BOOT_STATUS_RELOCATE_DONE /* t1 = 0x01 */
 	REG_S	t1, 0(t0)
 	fence	rw, rw
-
+	/* 此时，我们正在从链接地址运行 */
+	/* 为所有Boot HART 复位寄存器 */
 	/* At this point we are running from link address */
 
 	/* Reset all registers for boot HART */
 	li	ra, 0
 	call	_reset_regs
-
+	/* 清空 BSS */
 	/* Zero-out BSS */
-	lla	s4, _bss_start
-	lla	s5, _bss_end
+	lla	s4, _bss_start /* s4 = 0x80013000 */
+	lla	s5, _bss_end   /* s5 = 0x80016ce8 */
 _bss_zero:
-	REG_S	zero, (s4)
-	add	s4, s4, __SIZEOF_POINTER__
+	REG_S	zero, (s4)             /* MEM[0x80013000] = 0 */
+	add	s4, s4, __SIZEOF_POINTER__ /* s4 = 0x80013008 0x80013010 ...  */
 	blt	s4, s5, _bss_zero
-
+	/* if(s4 <s5) 循环执行，也就是将MEM[0x80013000] - MEM[0x80016ce8]这段内存全部置零 */
+	/* 设置临时 trap handler 地址 */
 	/* Setup temporary trap handler */
-	lla	s4, _start_hang
+	lla	s4, _start_hang   /* s4 = 0x80000510 */
 	csrw	CSR_MTVEC, s4
-
+	/* CSR_MTVEC，它保存发生异常时处理器需要跳转到的地址， csr[0x305] = 0x80000510 */
+	/* 设置临时8Kb大小栈空间 */
 	/* Setup temporary stack */
-	lla	s4, _fw_end
-	li	s5, (SBI_SCRATCH_SIZE * 2)
-	add	sp, s4, s5
-
+	lla	s4, _fw_end                 /* s4 = 0x80017000 */
+	li	s5, (SBI_SCRATCH_SIZE * 2) 	/* stack = SBI_SCRATCH_SIZE * 2 = 8Kb */
+	add	sp, s4, s5 	                /* stack pointer = _fw_end + 8Kb */
+	
+    /* 让主固件保存信息 */
 	/* Allow main firmware to save info */
+	/* s0 = 0x0, s1 = 0xbf0000000, s2 = 0x102c, s3 = 0x0, s4 = 0x0 */
 	MOV_5R	s0, a0, s1, a1, s2, a2, s3, a3, s4, a4
 	call	fw_save_info
 	MOV_5R	a0, s0, a1, s1, a2, s2, a3, s3, a4, s4
@@ -244,6 +301,10 @@ _bss_zero:
 #endif
 
 	/*
+	 * 初始化 platform
+	 * Note: 传递给固件的a0至a4寄存器是该函数的参数。
+	 */
+	/*
 	 * Initialize platform
 	 * Note: The a0 to a4 registers passed to the
 	 * firmware are parameters to this function.
@@ -253,10 +314,12 @@ _bss_zero:
 	add	t0, a0, zero
 	MOV_5R	a0, s0, a1, s1, a2, s2, a3, s3, a4, s4
 	add	a1, t0, zero
-
+    
+	/* 预加载 HART 的一些信息
 	/* Preload HART details
-	 * s7 -> HART Count
-	 * s8 -> HART Stack Size
+	 * a4 -> platform = 0x800120e8
+	 * s7 -> HART Count = 0x2
+	 * s8 -> HART Stack Size = 0x2000
 	 */
 	lla	a4, platform
 #if __riscv_xlen > 32
@@ -291,9 +354,14 @@ _scratch_init:
 	sub	tp, tp, a5
 	li	a5, SBI_SCRATCH_SIZE
 	sub	tp, tp, a5
+	/* 将tp保存一份到t3 */
+	/* 为何赋值操作要用addi指令。因为mv指令是伪指令，基础指令就是addi */
 
+	/* 为所有HART设置scratch空间 */
 	/* Initialize scratch space */
 	/* Store fw_start and fw_size in scratch space */
+    /* 初始化 scratch 空间 */
+	/* 保存 fw_start 和 fw_size */
 	lla	a4, _fw_start
 	sub	a5, t3, a4
 	REG_S	a4, SBI_SCRATCH_FW_START_OFFSET(tp)
@@ -418,14 +486,16 @@ _wait_for_boot_hart:
 	bne	t0, t1, _wait_for_boot_hart
 
 _start_warm:
+	/* 禁用并清除所有中断 */
 	/* Reset all registers for non-boot HARTs */
 	li	ra, 0
 	call	_reset_regs
 
 	/* Disable and clear all interrupts */
-	csrw	CSR_MIE, zero
-	csrw	CSR_MIP, zero
+	csrw	CSR_MIE, zero /* xIE, 打开（1）或者关闭（0）M/S/U 模式下对应的 External/Timer/Software 中断，此处清除M模式下所有中断 */
+	csrw	CSR_MIP, zero /* xIP, 获取当前 M/S/U 模式下对应的 External/Timer/Software 中断是否发生，同上 */
 
+	/* 查找 HART 数量和 HART 堆栈大小 */
 	/* Find HART count and HART stack size */
 	lla	a4, platform
 #if __riscv_xlen == 64
@@ -436,10 +506,10 @@ _start_warm:
 	lw	s8, SBI_PLATFORM_HART_STACK_SIZE_OFFSET(a4)
 #endif
 	REG_L	s9, SBI_PLATFORM_HART_INDEX2ID_OFFSET(a4)
-
+	/* 查询 HART id */
 	/* Find HART id */
 	csrr	s6, CSR_MHARTID
-
+	/* 查询 HART index 如果s9 = 0，跳转到标号3处执行*/
 	/* Find HART index */
 	beqz	s9, 3f
 	li	a4, 0
@@ -482,7 +552,7 @@ _start_warm:
 	lla	a4, _trap_handler_rv32_hyp
 _skip_trap_handler_rv32_hyp:
 #endif
-	csrw	CSR_MTVEC, a4
+	csrw	CSR_MTVEC, a4  /* CSR_MTVEC = _trap_handler = 0x80000520 */
 
 #if __riscv_xlen == 32
 	/* Override trap exit for H-extension */
@@ -495,10 +565,10 @@ _skip_trap_handler_rv32_hyp:
 	REG_S	a4, SBI_SCRATCH_TRAP_EXIT_OFFSET(a5)
 _skip_trap_exit_rv32_hyp:
 #endif
-
+	/* 初始化SBI */
 	/* Initialize SBI runtime */
-	csrr	a0, CSR_MSCRATCH
-	call	sbi_init
+	csrr	a0, CSR_MSCRATCH /* a0 = MSCRATCH */
+	call	sbi_init         /* 调用sbi_init函数，a0即函数的参数，也就是MSCRATCH执行的地址 */
 
 	/* We don't expect to reach here hence just hang */
 	j	_start_hang
@@ -819,6 +889,7 @@ _reset_regs:
 	li t4, 0
 	li t5, 0
 	li t6, 0
+    /* CSR_MSCRATCH，Machine 模式下专用寄存器，我们可以自己定义其用法，譬如用该寄存器保存当前在 hart 上运行的 task 的上下文的地址 */
 	csrw CSR_MSCRATCH, 0
 
 	ret

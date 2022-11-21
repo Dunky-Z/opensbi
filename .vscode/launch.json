@@ -1,0 +1,208 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "enter program name, for example ${workspaceFolder}/a.out",
+            "processId": "${command:pickProcess}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "C/C++(RISCV) - Debug OpenSBI  Payload",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}",
+            "args": [],
+            "stopAtEntry": true,
+            "targetArchitecture": "arm",
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "miDebuggerPath": "/home/user/baili/toolchain/bin/riscv64-unknown-elf-gdb", // RISC-V 工具链中的 gdb
+            "miDebuggerServerAddress": "0.0.0.0:1234",
+            "externalConsole": true,
+            // "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    // "text": "-enable-pretty-printing",
+                    "text": "set target-async off",
+                    "ignoreFailures": false,
+                    // "target remote": 1234
+                }
+            ],
+            "launchCompleteCommand": "None",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "file /home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_payload.elf",
+                    "description": "load file to gdb",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "target remote :1234",
+                    "description": "connect to server",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "b _start",
+                    "description": "set breakpoints at _start",
+                    "ignoreFailures": false
+                },
+            ],
+        },
+        {
+            "name": "C/C++(RISCV) - Debug OpenSBI  Dynamic",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}",
+            "args": [],
+            "stopAtEntry": true,
+            "targetArchitecture": "arm",
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "miDebuggerPath": "/home/user/baili/toolchain/bin/riscv64-unknown-elf-gdb", // RISC-V 工具链中的 gdb
+            "miDebuggerServerAddress": "0.0.0.0:1234",
+            "externalConsole": true,
+            // "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    // "text": "-enable-pretty-printing",
+                    "text": "set target-async off",
+                    "ignoreFailures": false,
+                    // "target remote": 1234
+                }
+            ],
+            "launchCompleteCommand": "None",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "file /home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_dynamic.elf",
+                    "description": "load file to gdb",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "target remote :1234",
+                    "description": "connect to server",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "b _start",
+                    "description": "set breakpoints at _start",
+                    "ignoreFailures": false
+                },
+            ],
+        },
+        {
+            "name": "C/C++(RISCV) - Debug OpenSBI HAPS",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}",
+            "args": [],
+            "stopAtEntry": true,
+            "targetArchitecture": "arm",
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "miDebuggerPath": "/home/user/baili/toolchain/bin/riscv64-unknown-elf-gdb", // RISC-V 工具链中的 gdb
+            "miDebuggerServerAddress": "0.0.0.0:1234",
+            "externalConsole": true,
+            // "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    // "text": "-enable-pretty-printing",
+                    "text": "set target-async off",
+                    "ignoreFailures": false,
+                    // "target remote": 1234
+                }
+            ],
+            "launchCompleteCommand": "None",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "file /home/user/win2030SDK/eswin_u_sdk/opensbi/build/platform/eswin/haps_fu800/firmware/fw_payload.elf",
+                    "description": "load file to gdb",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "target remote :1234",
+                    "description": "connect to server",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "b _start",
+                    "description": "set breakpoints at _start",
+                    "ignoreFailures": false
+                },
+            ],
+        },
+        {
+            "name": "C/C++ - Debug nemu",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/user/learn_abc/ics-pa-nic/nemu/build/riscv64-nemu-interpreter",
+            "MIMode": "gdb",
+            "cwd": "${workspaceFolder}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            // "customLaunchSetupCommands": [
+            //     {
+            //         "text": "b main",
+            //         "description": "set breakpoints at main",
+            //         "ignoreFailures": false
+            //     },
+            // ],
+        },
+        {
+            "name": "C/C++ - Debug NEMU",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/user/learn_abc/NEMU/build/riscv64-nemu-interpreter",
+            "MIMode": "gdb",
+            "cwd": "${workspaceFolder}",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            // "customLaunchSetupCommands": [
+            //     {
+            //         "text": "b main",
+            //         "description": "set breakpoints at main",
+            //         "ignoreFailures": false
+            //     },
+            // ],
+        },
+    ]
+}
