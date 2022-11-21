@@ -450,6 +450,17 @@ static void __noreturn init_warmboot(struct sbi_scratch *scratch, u32 hartid)
 static atomic_t coldboot_lottery = ATOMIC_INITIALIZER(0);
 
 /**
+ * 初始化当前 HART 的 OpenSBI 库，并跳到下一个引导阶段。
+ *
+ * 该函数需要：
+ * 1. mscatch 寄存器指向当前 HART 的 SBI_Scratch
+ * 2. 已为当前 HART 设置堆栈指针 SP
+ * 3. 在 MSTATUS 寄存器中禁用中断
+ * 4. 在 MIE 寄存器中禁用所有中断
+ *
+ * @param scratch pointer to sbi_scratch of current HART
+ */
+/**
  * Initialize OpenSBI library for current HART and jump to next
  * booting stage.
  *
@@ -471,7 +482,7 @@ void __noreturn sbi_init(struct sbi_scratch *scratch)
 	if ((SBI_HARTMASK_MAX_BITS <= hartid) ||
 	    sbi_platform_hart_invalid(plat, hartid))
 		sbi_hart_hang();
-
+	/* 确定下个模式，首先会经过 misa_extension 判断是否支持将要切换的模式 */
 	switch (scratch->next_mode) {
 	case PRV_M:
 		next_mode_supported = TRUE;
@@ -487,7 +498,12 @@ void __noreturn sbi_init(struct sbi_scratch *scratch)
 	default:
 		sbi_hart_hang();
 	}
-
+	/**
+     * 只有在 scratch->next_mode 中指定的 HART 支持特权级模式
+     * 才能可以当做冷启动 HART，因为冷启动 HART 将直接跳转到下一个启动阶段。
+	 *
+     * 我们使用抽签机制从满足上述条件的 HART 中选出冷启动 HART。
+    */
 	/*
 	 * Only the HART supporting privilege mode specified in the
 	 * scratch->next_mode should be allowed to become the coldboot

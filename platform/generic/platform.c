@@ -58,6 +58,22 @@ static bool platform_has_mlevel_imsic = false;
 static u32 generic_hart_index2id[SBI_HARTMASK_MAX_BITS] = { 0 };
 
 /*
+ *
+ * fw_platform_init() 函数在启动 HART 时很早就被调用。
+ * OpenSBI 参考固件，这样平台的具体代码就有机会在使用之前更新 "平台 "实例。
+ * 
+ * 传递给 fw_platform_init() 函数的五个参数，是启动阶段的五个寄存器值 A0-A4，其中
+ * arg0 = A0 = 0
+ * 
+ * arg1 = A1 = 设备树 FDT 地址
+ * arg2 = A2 = 设备树大小
+ * arg3 = A3 = 0
+ * 
+ * fw_platform_init() 函数的返回值是 FDT 位置。如果 FDT 没有变化（或者 FDT 被就地修改），
+ * 那么 fw_platform_init() 可以一直返回原来的 FDT 位置（即'arg1'），不做修改。
+ * 
+ */
+/*
  * The fw_platform_init() function is called very early on the boot HART
  * OpenSBI reference firmwares so that platform specific code get chance
  * to update "platform" instance before it is used.

@@ -777,8 +777,8 @@ sbi_hart_switch_mode(unsigned long arg0, unsigned long arg1,
 	}
 
 	val = csr_read(CSR_MSTATUS);
-	val = INSERT_FIELD(val, MSTATUS_MPP, next_mode);
-	val = INSERT_FIELD(val, MSTATUS_MPIE, 0);
+	val = INSERT_FIELD(val, MSTATUS_MPP, next_mode); /* mret 返回后，是根据寄存器 mstatus 的 MPP 来决定接来来是处于什么模式 */
+	val = INSERT_FIELD(val, MSTATUS_MPIE, 0);        /* 禁用中断 */
 #if __riscv_xlen == 32
 	if (misa_extension('H')) {
 		valH = csr_read(CSR_MSTATUSH);

@@ -315,7 +315,7 @@ _bss_zero:
 	MOV_5R	a0, s0, a1, s1, a2, s2, a3, s3, a4, s4
 	add	a1, t0, zero
     
-	/* 预加载 HART 的一些信息
+	/* 预加载 HART 的一些信息 */
 	/* Preload HART details
 	 * a4 -> platform = 0x800120e8
 	 * s7 -> HART Count = 0x2
