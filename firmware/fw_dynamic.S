@@ -26,10 +26,20 @@ _bad_dynamic_info:
 	 * We can only use a0, a1, and a2 registers here.
 	 * The boot HART id should be returned in 'a0'.
 	 */
+	/* 
+	 * 这个函数在很早的阶段就被调用，甚至比fw_save_info()还早
+	 * 在这里我们只能使用a0,a1和a2寄存器，并且boot HART id应该用a0返回
+	 */ 
 fw_boot_hart:
 	/* Sanity checks */
 	li	a1, FW_DYNAMIC_INFO_MAGIC_VALUE
+	/* a0 = 从a2读取FW_DYNAMIC_INFO_MAGIC_OFFSET字节 */
 	REG_L	a0, FW_DYNAMIC_INFO_MAGIC_OFFSET(a2)
+	/* 
+	 * 判断读取的魔数是否与FW_DYNAMIC_INFO_MAGIC_VALUE相同
+	 * 如果不相等就跳转到_bad_dynamic_info（一个死循环）
+	 * 以下过程类似，都是判断一些基础信息是否匹配，如果不匹配则进入死循环
+	 */
 	bne	a0, a1, _bad_dynamic_info
 	li	a1, FW_DYNAMIC_INFO_VERSION_MAX
 	REG_L	a0, FW_DYNAMIC_INFO_VERSION_OFFSET(a2)
