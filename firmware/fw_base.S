@@ -188,12 +188,23 @@ _relocate:
     /* else 开始重定位 */
 	sub	t4, t4, t2
 	add	t4, t4, t0
+    /* if load地址 < link地址 跳转到_relocate_copy_to_upper，往高地址拷贝数据 */
 	blt	t2, t0, _relocate_copy_to_upper
 /**
- * _load_start 比 _link_start 大, 往低地址拷贝数据, 可以看到t2和t0是拷贝时的指针。
+ * if load 地址 > link地址, 往低地址拷贝数据, 可以看到 t2 和 t0 是拷贝时的指针。
  * 所以，_link_end(t1)要比_load_start(t2)小，不然拷贝的时候会出现重叠的情况。
+ *
+ *  地 |       _link_start <--- t0
+ *  址 |
+ *  增 |      
+ *  长 |       _link_end   <--- t1
+ *  方 |
+ *  向 ∨       _load_start <--- t2
+ *
+ *             _load_end   <--- t3
  */
 _relocate_copy_to_lower:
+    /* if link 地址小于等于 load地址，就搬运数据 */
 	ble	t1, t2, _relocate_copy_to_lower_loop
 	lla	t3, _relocate_lottery
 	BRANGE	t2, t1, t3, _start_hang
@@ -205,13 +216,30 @@ _relocate_copy_to_lower:
 	BRANGE	t2, t1, t5, _start_hang
 	BRANGE  t3, t5, t2, _start_hang
 _relocate_copy_to_lower_loop:
+    /* 每次把 t2 的数据搬到 t0 后，两个寄存器指向的地址都加上 __SIZEOF_POINTER__ 大小 */
 	REG_L	t3, 0(t2)
 	REG_S	t3, 0(t0)
 	add	t0, t0, __SIZEOF_POINTER__
 	add	t2, t2, __SIZEOF_POINTER__
+    /* 直到 _link_start == _link_ends 说明数据搬完了 */
 	blt	t0, t1, _relocate_copy_to_lower_loop
+    /* 搬完数据就跳转到 _relocate_done */
 	jr	t4
+
+/**
+ * if load 地址 < link地址, 往高地址拷贝数据, 
+ *
+ *  地 |      _load_start  <--- t2
+ *  址 |
+ *  增 |      
+ *  长 |      _load_end    <--- t3
+ *  方 |
+ *  向 ∨      _link_start  <--- t0
+ *
+ *            _link_end    <--- t1
+ */
 _relocate_copy_to_upper:
+    /* if _load_end 地址小于等于 _link_start 地址，就搬运数据 */
 	ble	t3, t0, _relocate_copy_to_upper_loop
 	lla	t2, _relocate_lottery
 	BRANGE	t0, t3, t2, _start_hang
@@ -223,11 +251,14 @@ _relocate_copy_to_upper:
 	BRANGE	t0, t3, t5, _start_hang
 	BRANGE	t2, t5, t0, _start_hang
 _relocate_copy_to_upper_loop:
+    /* 每次把 t3 的数据搬到 t1 后，两个寄存器指向的地址都减去 __SIZEOF_POINTER__ 大小 */
 	add	t3, t3, -__SIZEOF_POINTER__
 	add	t1, t1, -__SIZEOF_POINTER__
 	REG_L	t2, 0(t3)
 	REG_S	t2, 0(t1)
+    /* 直到 _link_start == _link_ends 说明数据搬完了 */
 	blt	t0, t1, _relocate_copy_to_upper_loop
+    /* 搬完数据就跳转到 _relocate_done */
 	jr	t4
 _wait_relocate_copy_done:
 	/* 等待重定位copy结束，直到_start == _link_start */
