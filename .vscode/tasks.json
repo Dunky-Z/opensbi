@@ -173,7 +173,7 @@
         {
             "type": "shell",
             "label": "Simulate Uboot",
-            "command": "/home/user/win2030SDK/qemu-system-riscv64",
+            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
             "args": [
                 "-nographic",
                 "-machine",
@@ -260,7 +260,7 @@
         {
             "type": "shell",
             "label": "Simulate OpenSBI Payload",
-            "command": "/home/user/win2030SDK/qemu-system-riscv64",
+            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
             "args": [
                 "-nographic",
                 "-machine",
@@ -282,7 +282,7 @@
         {
             "type": "shell",
             "label": "Simulate OpenSBI Dynamic",
-            "command": "/home/user/bootrom_fix/qemu/build/qemu-system-riscv64",
+            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
             "args": [
                 "-nographic",
                 "-machine",
@@ -290,11 +290,9 @@
                 "-m",
                 "8G",
                 "-smp",
-                "3",
+                "8",
                 "-bios",
-                "/home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_dynamic.elf",
-                // "-s",
-                // "-S"
+                "/home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_dynamic.elf"
             ],
             "options": {
                 "cwd": ""
@@ -304,7 +302,7 @@
         {
             "type": "shell",
             "label": "Simulate OpenSBI HAPS",
-            "command": "/home/user/win2030SDK/qemu-system-riscv64",
+            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
             "args": [
                 "-nographic",
                 "-machine",

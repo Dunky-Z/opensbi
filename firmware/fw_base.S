@@ -65,13 +65,15 @@ _start:
 	li	a7, -1
     /**
      * 除了 fw_dynamic 类型，其他类型的固件，执行时所有HART都会进入_try_lottery
-     * 因为a7 一定等于 -1 一定等于 a0。
+     * 因为a7 一定等于 -1 一定等于 a0
+     * 在 fw_dynamic 类型中，a6保存了boot_hart，所以这条指令不会被执行
 	 */
 	beq	a6, a7, _try_lottery
 	/**
-     * 如果是 fw_dynamic 类型，那么a6寄存器在上一级会指定boot hart，并且a0是当前的hart id应该用a0
+     * 如果是 fw_dynamic 类型，那么a6寄存器在上一级会指定boot hart，
+     * 并且a0在上一阶段保存了当前hart id，
      * 经过对比，如果两者不等说明不是指定的boot hart，直接跳到等待重定位完成就行。
-     * 如果是 boot hart 就继续执行
+     * 如果是 boot hart 就继续执行，也就是只有指定的boot_hart去抽奖，那必定是它抽中
      */
 	/* Jump to relocation wait loop if we are not boot hart */
 	bne	a0, a6, _wait_relocate_copy_done

@@ -94,7 +94,9 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
 	void *fdt = (void *)arg1;
 	u32 hartid, hart_count = 0;
 	int rc, root_offset, cpus_offset, cpu_offset, len;
-
+	hartid			= current_hartid();
+	if (hartid == 2)
+        goto fail;
 	root_offset = fdt_path_offset(fdt, "/");
 	if (root_offset < 0)
 		goto fail;
