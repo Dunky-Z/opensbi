@@ -11,3 +11,5 @@ install/
 tags
 cscope*
 *.swp
+
+.cache

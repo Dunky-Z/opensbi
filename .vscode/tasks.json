@@ -1,322 +1,326 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-        {
-            "type": "shell",
-            "label": "Rebuild BootRom btr2fpga",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--rebuild",
-                "btr2fpga"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Rebuild BootRom btr2fpga --simulate zebu",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--rebuild",
-                "btr2fpga",
-                "--simulate",
-                "zebu"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Remake BootRom btr2fpga",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--remake",
-                "btr2fpga"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Remake BootRom btr2fpga --simulate zebu",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--remake",
-                "btr2fpga",
-                "--simulate",
-                "zebu"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Rebuild BootRom btr2fpga --simulate fpga",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--rebuild",
-                "btr2fpga",
-                "--simulate",
-                "fpga"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Remake BootRom btr2fpga --simulate fpga",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--remake",
-                "btr2fpga",
-                "--simulate",
-                "fpga"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Rebuild BootRom btr2qemu --simulate qemu",
-            "command": "python3",
-            "args": [
-                "tool/bootromBuildTest.py",
-                "--rebuild",
-                "btr2qemu",
-                "--simulate",
-                "qemu"
-            ],
-            "options": {
-                "cwd": "/home/user/bootrom_fix/bootrom"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Make haps",
-            "dependsOn": "Make clean haps",
-            "command": "echo",
-            "args": [
-                "user",
-                "|",
-                "sudo",
-                "-S",
-                "make",
-                "haps",
-                "2>make.log"
-            ],
-            "options": {
-                "cwd": "/home/user/win2030SDK/eswin_u_sdk"
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Make QEMU",
-            "dependsOn": "Make clean qemu",
-            "command": "echo",
-            "args": [
-                "user",
-                "|",
-                "sudo",
-                "-S",
-                "make",
-                "qemu"
-            ],
-            "options": {
-                "cwd": "/home/user/win2030SDK/eswin_u_sdk"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Make clean haps",
-            "command": "echo",
-            "args": [
-                "user",
-                "|",
-                "sudo",
-                "-S",
-                "make",
-                "clean_haps"
-            ],
-            "options": {
-                "cwd": "/home/user/win2030SDK/eswin_u_sdk"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Make clean qemu",
-            "command": "echo",
-            "args": [
-                "user",
-                "|",
-                "sudo",
-                "-S",
-                "make",
-                "clean_qemu"
-            ],
-            "options": {
-                "cwd": "/home/user/win2030SDK/eswin_u_sdk"
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Simulate Uboot",
-            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
-            "args": [
-                "-nographic",
-                "-machine",
-                "sifive_u",
-                "-m",
-                "8G",
-                "-bios",
-                "/home/user/win2030SDK/eswin_u_sdk/work/qemu_image/fw_payload.elf"
-            ],
-            "options": {
-                "cwd": ""
-            }
-        },
-        {
-            "type": "shell",
-            "label": "Kill Qemu Server(RISCV)",
-            "command": "ps -C qemu-system-riscv64 --no-headers | cut -d \\  -f 1 | xargs kill -9",
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Kill Qemu",
-            "command": "pkill -9 qemu"
-        },
-        {
-            "type": "shell",
-            "label": "Make OpenSBI Payload",
-            "command": "make",
-            "args": [
-                "clean",
-                "&&",
-                "make",
-                "-j32",
-                "-C",
-                "/home/user/learn_abc/opensbi",
-                "CROSS_COMPILE=riscv64-unknown-elf-",
-                "PLATFORM=generic"
-            ],
-            "options": {
-                "cwd": "/home/user/learn_abc/opensbi"
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Make OpenSBI Dynamic",
-            "command": "make",
-            "args": [
-                "clean",
-                "&&",
-                "make",
-                "-j32",
-                "-C",
-                "/home/user/learn_abc/opensbi",
-                "CROSS_COMPILE=riscv64-unknown-elf-",
-                "PLATFORM=generic",
-                "FW_DYNAMIC=y"
-            ],
-            "options": {
-                "cwd": "/home/user/learn_abc/opensbi"
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Make OpenSBI ESWIN HAPS FU800",
-            "command": "make",
-            "args": [
-                "clean",
-                "&&",
-                "make",
-                "-j32",
-                "-C",
-                "/home/user/win2030SDK/eswin_u_sdk/opensbi",
-                "CROSS_COMPILE=riscv64-unknown-elf-",
-                "PLATFORM=eswin/haps_fu800",
-                "FW_FDT_PATH=/home/user/win2030SDK/eswin_u_sdk/work/haps_uboot/arch/riscv/dts/eswin_haps_fu800.dtb"
-            ],
-            "options": {
-                "cwd": "/home/user/win2030SDK/eswin_u_sdk/opensbi"
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Simulate OpenSBI Payload",
-            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
-            "args": [
-                "-nographic",
-                "-machine",
-                "virt",
-                "-m",
-                "8G",
-                "-smp",
-                "5",
-                "-bios",
-                "/home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_payload.elf",
-                "-s",
-                "-S"
-            ],
-            "options": {
-                "cwd": ""
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Simulate OpenSBI Dynamic",
-            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
-            "args": [
-                "-nographic",
-                "-machine",
-                "virt",
-                "-m",
-                "8G",
-                "-smp",
-                "8",
-                "-bios",
-                "/home/user/learn_abc/opensbi/build/platform/generic/firmware/fw_dynamic.elf"
-            ],
-            "options": {
-                "cwd": ""
-            },
-            "problemMatcher": []
-        },
-        {
-            "type": "shell",
-            "label": "Simulate OpenSBI HAPS",
-            "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
-            "args": [
-                "-nographic",
-                "-machine",
-                "sifive_u",
-                "-m",
-                "8G",
-                "-bios",
-                "/home/user/win2030SDK/eswin_u_sdk/opensbi/build/platform/eswin/haps_fu800/firmware/fw_payload.elf",
-                "-s",
-                "-S"
-            ],
-            "options": {
-                "cwd": ""
-            }
-        }
-    ]
-}
+    "version": "2.0.0",
+    "tasks": [
+          {
+              "type": "shell",
+              "label": "Rebuild BootRom btr2fpga",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--rebuild",
+                  "btr2fpga"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Rebuild BootRom btr2fpga --simulate zebu",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--rebuild",
+                  "btr2fpga",
+                  "--simulate",
+                  "zebu"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Remake BootRom btr2fpga",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--remake",
+                  "btr2fpga"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Remake BootRom btr2fpga --simulate zebu",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--remake",
+                  "btr2fpga",
+                  "--simulate",
+                  "zebu"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Rebuild BootRom btr2fpga --simulate fpga",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--rebuild",
+                  "btr2fpga",
+                  "--simulate",
+                  "fpga"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Remake BootRom btr2fpga --simulate fpga",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--remake",
+                  "btr2fpga",
+                  "--simulate",
+                  "fpga"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Rebuild BootRom btr2qemu --simulate qemu",
+              "command": "python3",
+              "args": [
+                  "tool/bootromBuildTest.py",
+                  "--rebuild",
+                  "btr2qemu",
+                  "--simulate",
+                  "qemu"
+              ],
+              "options": {
+                  "cwd": "/home/user/bootrom_fix/bootrom"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Make haps",
+              "dependsOn": "Make clean haps",
+              "command": "echo",
+              "args": [
+                  "user",
+                  "|",
+                  "sudo",
+                  "-S",
+                  "make",
+                  "haps",
+                  "2>make.log"
+              ],
+              "options": {
+                  "cwd": "/home/user/win2030SDK/eswin_u_sdk"
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Make QEMU",
+              "dependsOn": "Make clean qemu",
+              "command": "echo",
+              "args": [
+                  "user",
+                  "|",
+                  "sudo",
+                  "-S",
+                  "make",
+                  "qemu"
+              ],
+              "options": {
+                  "cwd": "/home/user/win2030SDK/eswin_u_sdk"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Make clean haps",
+              "command": "echo",
+              "args": [
+                  "user",
+                  "|",
+                  "sudo",
+                  "-S",
+                  "make",
+                  "clean_haps"
+              ],
+              "options": {
+                  "cwd": "/home/user/win2030SDK/eswin_u_sdk"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Make clean qemu",
+              "command": "echo",
+              "args": [
+                  "user",
+                  "|",
+                  "sudo",
+                  "-S",
+                  "make",
+                  "clean_qemu"
+              ],
+              "options": {
+                  "cwd": "/home/user/win2030SDK/eswin_u_sdk"
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Simulate Uboot",
+              "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
+              "args": [
+                  "-nographic",
+                  "-machine",
+                  "sifive_u",
+                  "-m",
+                  "8G",
+                  "-bios",
+                  "/home/user/win2030SDK/eswin_u_sdk/work/qemu_image/fw_payload.elf"
+              ],
+              "options": {
+                  "cwd": ""
+              }
+          },
+          {
+              "type": "shell",
+              "label": "Kill Qemu Server(RISCV)",
+              "command": "ps -C qemu-system-riscv64 --no-headers | cut -d \\  -f 1 | xargs kill -9",
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Kill Qemu",
+              "command": "pkill -9 qemu"
+          },
+          {
+              "type": "shell",
+              "label": "Make OpenSBI Payload",
+              "command": "make",
+              "args": [
+                  "clean",
+                  "&&",
+                  "bear",
+                  "--",
+                  "make",
+                  "-j32",
+                  "-C",
+                  "/home/nic/develop/opensbi",
+                  "CROSS_COMPILE=riscv64-linux-gnu-",
+                  "PLATFORM=generic"
+              ],
+              "options": {
+                  "cwd": "/home/nic/develop/opensbi"
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Make OpenSBI Dynamic",
+              "command": "make",
+              "args": [
+                  "clean",
+                  "&&",
+                  "bear",
+                  "--",
+                  "make",
+                  "-j32",
+                  "-C",
+                  "/home/nic/develop/opensbi",
+                  "CROSS_COMPILE=riscv64-linux-gnu-",
+                  "PLATFORM=generic",
+                  "FW_DYNAMIC=y"
+              ],
+              "options": {
+                  "cwd": "/home/nic/develop/opensbi"
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Make OpenSBI ESWIN HAPS FU800",
+              "command": "make",
+              "args": [
+                  "clean",
+                  "&&",
+                  "make",
+                  "-j32",
+                  "-C",
+                  "/home/user/win2030SDK/eswin_u_sdk/opensbi",
+                  "CROSS_COMPILE=riscv64-linux-gnu-",
+                  "PLATFORM=eswin/haps_fu800",
+                  "FW_FDT_PATH=/home/user/win2030SDK/eswin_u_sdk/work/haps_uboot/arch/riscv/dts/eswin_haps_fu800.dtb"
+              ],
+              "options": {
+                  "cwd": "/home/user/win2030SDK/eswin_u_sdk/opensbi"
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Simulate OpenSBI Payload",
+              "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
+              "args": [
+                  "-nographic",
+                  "-machine",
+                  "virt",
+                  "-m",
+                  "8G",
+                  "-smp",
+                  "5",
+                  "-bios",
+                  "/home/nic/develop/opensbi/build/platform/generic/firmware/fw_payload.elf",
+                  "-s",
+                  "-S"
+              ],
+              "options": {
+                  "cwd": ""
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Simulate OpenSBI Dynamic",
+              "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
+              "args": [
+                  "-nographic",
+                  "-machine",
+                  "virt",
+                  "-m",
+                  "8G",
+                  "-smp",
+                  "8",
+                  "-bios",
+                  "/home/nic/develop/opensbi/build/platform/generic/firmware/fw_dynamic.elf"
+              ],
+              "options": {
+                  "cwd": ""
+              },
+              "problemMatcher": []
+          },
+          {
+              "type": "shell",
+              "label": "Simulate OpenSBI HAPS",
+              "command": "/home/user/learn_abc/qemu/build/qemu-system-riscv64",
+              "args": [
+                  "-nographic",
+                  "-machine",
+                  "sifive_u",
+                  "-m",
+                  "8G",
+                  "-bios",
+                  "/home/user/win2030SDK/eswin_u_sdk/opensbi/build/platform/eswin/haps_fu800/firmware/fw_payload.elf",
+                  "-s",
+                  "-S"
+              ],
+              "options": {
+                  "cwd": ""
+              }
+          }
+      ]
+  }
