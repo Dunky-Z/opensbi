@@ -7,6 +7,7 @@ Copyright and License
 ---------------------
 
 The OpenSBI project is:
+test
 
 * Copyright (c) 2019 Western Digital Corporation or its affiliates
 * Copyright (c) 2023 RISC-V International
