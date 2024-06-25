@@ -56,7 +56,7 @@ config SBI_ECALL_DBTR
 
 config SBIUNIT
 	bool "Enable SBIUNIT tests"
-	default n
+	default y
 
 config SBI_ECALL_SSE
 	bool "SSE extension"
